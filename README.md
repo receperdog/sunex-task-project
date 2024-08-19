@@ -11,7 +11,7 @@ This project is a simple task management application built using ASP.NET Core 8.
 - [Getting Started](#getting-started)
 - [Running the Application](#running-the-application)
 - [Running Tests](#running-tests)
-- [CI/CD Pipeline](#ci-cd-pipeline)
+- [CI/CD Pipeline](#cicd-pipeline)
 - [Exception Handling Middleware](#exception-handling-middleware)
 - [Contributing](#contributing)
 - [License](#license)
