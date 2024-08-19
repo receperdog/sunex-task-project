@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using sunex_task_project.AppDataContext;
 using sunex_task_project.Data;
+using sunex_task_project.Hubs;
 using sunex_task_project.Middleware;
 using sunex_task_project.Services;
 
@@ -21,6 +22,7 @@ builder.Logging.AddConsole();
 builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddApiVersioning(options =>
 {
@@ -51,5 +53,6 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHub<TaskHub>("/taskHub");
 
 app.Run();

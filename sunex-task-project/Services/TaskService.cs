@@ -1,9 +1,12 @@
 using AutoMapper;
+using Microsoft.Extensions.Logging;
 using sunex_task_project.Data;
 using sunex_task_project.Dtos;
 using sunex_task_project.Exceptions;
+using sunex_task_project.Hubs;
 using sunex_task_project.Models;
-using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace sunex_task_project.Services
 {
@@ -12,12 +15,14 @@ namespace sunex_task_project.Services
         private readonly ITaskRepository _taskRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<TaskService> _logger;
+        private readonly ITaskHubClient _taskHubClient;
 
-        public TaskService(ITaskRepository taskRepository, IMapper mapper, ILogger<TaskService> logger)
+        public TaskService(ITaskRepository taskRepository, IMapper mapper, ILogger<TaskService> logger, ITaskHubClient taskHubClient)
         {
             _taskRepository = taskRepository;
             _mapper = mapper;
             _logger = logger;
+            _taskHubClient = taskHubClient;
         }
 
         public async Task<IEnumerable<TaskResponseDto>> GetTasksAsync()
@@ -45,16 +50,13 @@ namespace sunex_task_project.Services
         {
             _logger.LogInformation("Adding a new task with title {Title}.", taskRequestDto.Title);
 
-            if (string.IsNullOrWhiteSpace(taskRequestDto.Title))
-            {
-                _logger.LogError("Task Title is required.");
-                throw new ArgumentException("Task Title is required.");
-            }
-
             var task = _mapper.Map<TaskItem>(taskRequestDto);
-
             var createdTask = await _taskRepository.AddTaskAsync(task);
-            return _mapper.Map<TaskResponseDto>(createdTask);
+            var createdTaskResponse = _mapper.Map<TaskResponseDto>(createdTask);
+
+            await _taskHubClient.NotifyTaskAdded(createdTaskResponse);
+
+            return createdTaskResponse;
         }
 
         public async Task<TaskResponseDto?> UpdateTaskAsync(int id, TaskUpdateDto taskUpdateDto)
@@ -68,15 +70,14 @@ namespace sunex_task_project.Services
                 throw new TaskNotFoundException(id);
             }
 
-            // Map the update DTO to the existing task entity
             var updatedTask = _mapper.Map(taskUpdateDto, existingTask);
-
             await _taskRepository.UpdateTaskAsync(updatedTask);
+            var updatedTaskResponse = _mapper.Map<TaskResponseDto>(updatedTask);
 
-            return _mapper.Map<TaskResponseDto>(updatedTask);
+            await _taskHubClient.NotifyTaskUpdated(updatedTaskResponse);
+
+            return updatedTaskResponse;
         }
-
-
 
         public async Task<bool> DeleteTaskAsync(int taskId)
         {
@@ -89,7 +90,13 @@ namespace sunex_task_project.Services
                 throw new TaskNotFoundException(taskId);
             }
 
-            return await _taskRepository.DeleteTaskAsync(taskId);
+            var result = await _taskRepository.DeleteTaskAsync(taskId);
+            if (result)
+            {
+                await _taskHubClient.NotifyTaskDeleted(taskId);
+            }
+
+            return result;
         }
     }
 }
