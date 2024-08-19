@@ -9,24 +9,26 @@ using sunex_task_project.Exceptions;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using sunex_task_project.Hubs;
 
 namespace sunex_task_project.Tests.Services
 {
     public class TaskServiceTests
     {
         private readonly TaskService _taskService;
-        // Following dependencies are mock dependencies to test service class.
         private readonly Mock<ITaskRepository> _mockTaskRepository;
         private readonly Mock<IMapper> _mockMapper;
         private readonly Mock<ILogger<TaskService>> _mockLogger;
+        private readonly Mock<ITaskHubClient> _mockTaskHubClient;
 
         public TaskServiceTests()
         {
             _mockTaskRepository = new Mock<ITaskRepository>();
             _mockMapper = new Mock<IMapper>();
             _mockLogger = new Mock<ILogger<TaskService>>();
-            // init task service with mock dependencies
-            _taskService = new TaskService(_mockTaskRepository.Object, _mockMapper.Object, _mockLogger.Object);
+            _mockTaskHubClient = new Mock<ITaskHubClient>();
+
+            _taskService = new TaskService(_mockTaskRepository.Object, _mockMapper.Object, _mockLogger.Object, _mockTaskHubClient.Object);
         }
 
         [Fact]
@@ -37,13 +39,17 @@ namespace sunex_task_project.Tests.Services
                 new TaskItem { TaskId = 1, Title = "Test Task 1" },
                 new TaskItem { TaskId = 2, Title = "Test Task 2" }
             };
-            // return tasks when call repo.GetTasksAsync()
+
             _mockTaskRepository.Setup(repo => repo.GetTasksAsync()).ReturnsAsync(tasks);
-            _mockMapper.Setup(m => m.Map<IEnumerable<TaskResponseDto>>(It.IsAny<IEnumerable<TaskItem>>()))
-                       .Returns(new List<TaskResponseDto> { new TaskResponseDto { TaskId = 1 }, new TaskResponseDto { TaskId = 2 } });
+            _mockMapper.Setup(m => m.Map<IEnumerable<TaskResponseDto>>(tasks))
+                       .Returns(new List<TaskResponseDto>
+                       {
+                           new TaskResponseDto { TaskId = 1 },
+                           new TaskResponseDto { TaskId = 2 }
+                       });
 
             var result = await _taskService.GetTasksAsync();
-            // be sure actual count is correct
+
             Assert.Equal(2, result.Count());
         }
 
@@ -51,9 +57,9 @@ namespace sunex_task_project.Tests.Services
         public async Task GetTaskByIdAsync_TaskExists_ShouldReturnTask()
         {
             var task = new TaskItem { TaskId = 1, Title = "Test Task 1" };
-            // return above task object when call repo.GetTaskByIdAsync(1)
+
             _mockTaskRepository.Setup(repo => repo.GetTaskByIdAsync(1)).ReturnsAsync(task);
-            _mockMapper.Setup(m => m.Map<TaskResponseDto>(It.IsAny<TaskItem>())).Returns(new TaskResponseDto { TaskId = 1 });
+            _mockMapper.Setup(m => m.Map<TaskResponseDto>(task)).Returns(new TaskResponseDto { TaskId = 1 });
 
             var result = await _taskService.GetTaskByIdAsync(1);
 
@@ -64,20 +70,18 @@ namespace sunex_task_project.Tests.Services
         [Fact]
         public async Task GetTaskByIdAsync_TaskDoesNotExist_ShouldThrowTaskNotFoundException()
         {
-            // return null when call repo.GetTaskByIdAsync(1)
             _mockTaskRepository.Setup(repo => repo.GetTaskByIdAsync(1)).ReturnsAsync((TaskItem)null);
-            // be sure about throwing TaskNotFoundException
+
             await Assert.ThrowsAsync<TaskNotFoundException>(() => _taskService.GetTaskByIdAsync(1));
         }
 
         [Fact]
-        public async Task AddTaskAsync_ValidTask_ShouldReturnCreatedTask()
+        public async Task AddTaskAsync_ValidTask_ShouldReturnCreatedTask_And_NotifyClients()
         {
             var taskRequestDto = new TaskRequestDto { Title = "New Task", Completed = false };
             var taskItem = new TaskItem { TaskId = 1, Title = "New Task", Completed = false };
             var taskResponseDto = new TaskResponseDto { TaskId = 1, Title = "New Task", Completed = false };
-            
-            // arrange mapping process for request and response
+
             _mockTaskRepository.Setup(repo => repo.GetTasksAsync()).ReturnsAsync(new List<TaskItem>());
             _mockMapper.Setup(m => m.Map<TaskItem>(taskRequestDto)).Returns(taskItem);
             _mockTaskRepository.Setup(repo => repo.AddTaskAsync(taskItem)).ReturnsAsync(taskItem);
@@ -88,10 +92,12 @@ namespace sunex_task_project.Tests.Services
             Assert.NotNull(result);
             Assert.Equal(1, result.TaskId);
             Assert.Equal(taskRequestDto.Title, result.Title);
+
+            _mockTaskHubClient.Verify(hub => hub.NotifyTaskAdded(It.IsAny<TaskResponseDto>()), Times.Once);
         }
 
         [Fact]
-        public async Task UpdateTaskAsync_TaskExists_ShouldReturnUpdatedTask()
+        public async Task UpdateTaskAsync_TaskExists_ShouldReturnUpdatedTask_And_NotifyClients()
         {
             var taskUpdateDto = new TaskUpdateDto { Title = "Updated Task", Completed = true };
             var existingTask = new TaskItem { TaskId = 1, Title = "Old Task", Completed = false };
@@ -104,40 +110,43 @@ namespace sunex_task_project.Tests.Services
             _mockMapper.Setup(m => m.Map<TaskResponseDto>(updatedTask)).Returns(updatedTaskResponse);
 
             var result = await _taskService.UpdateTaskAsync(1, taskUpdateDto);
-            // check actual and expected values
+
             Assert.NotNull(result);
             Assert.Equal(1, result.TaskId);
             Assert.Equal("Updated Task", result.Title);
+
+            _mockTaskHubClient.Verify(hub => hub.NotifyTaskUpdated(It.IsAny<TaskResponseDto>()), Times.Once);
         }
 
         [Fact]
         public async Task UpdateTaskAsync_TaskDoesNotExist_ShouldThrowTaskNotFoundException()
         {
             var taskUpdateDto = new TaskUpdateDto { Title = "Updated Task", Completed = true };
-            // return null when call repo.GetTaskByIdAsync(1)
+
             _mockTaskRepository.Setup(repo => repo.GetTaskByIdAsync(1)).ReturnsAsync((TaskItem)null);
-            // be sure about throwing TaskNotFoundException 
+
             await Assert.ThrowsAsync<TaskNotFoundException>(() => _taskService.UpdateTaskAsync(1, taskUpdateDto));
         }
 
         [Fact]
-        public async Task DeleteTaskAsync_TaskExists_ShouldReturnTrue()
+        public async Task DeleteTaskAsync_TaskExists_ShouldReturnTrue_And_NotifyClients()
         {
             var existingTask = new TaskItem { TaskId = 1, Title = "Test Task" };
+
             _mockTaskRepository.Setup(repo => repo.GetTaskByIdAsync(1)).ReturnsAsync(existingTask);
             _mockTaskRepository.Setup(repo => repo.DeleteTaskAsync(1)).ReturnsAsync(true);
- 
+
             var result = await _taskService.DeleteTaskAsync(1);
 
             Assert.True(result);
+            _mockTaskHubClient.Verify(hub => hub.NotifyTaskDeleted(It.IsAny<int>()), Times.Once);
         }
 
         [Fact]
         public async Task DeleteTaskAsync_TaskDoesNotExist_ShouldThrowTaskNotFoundException()
         {
-            // return null object when call repo.GetTaskByIdAsync(1)
             _mockTaskRepository.Setup(repo => repo.GetTaskByIdAsync(1)).ReturnsAsync((TaskItem)null);
-            // be sure about throwing TaskNotFoundException 
+
             await Assert.ThrowsAsync<TaskNotFoundException>(() => _taskService.DeleteTaskAsync(1));
         }
     }
