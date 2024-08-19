@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sunex-task-project", "sunex-task-project\sunex-task-project.csproj", "{D75A232C-2671-4B6D-ADD1-6DDF8F52C25F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B1E50A03-EBDC-48AA-A48D-73CE751E7509}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sunex_task_project.Tests", "tests\sunex_task_project.Tests\sunex_task_project.Tests.csproj", "{897276FC-C9D8-4C42-8013-38BAD1D9396C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D75A232C-2671-4B6D-ADD1-6DDF8F52C25F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D75A232C-2671-4B6D-ADD1-6DDF8F52C25F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D75A232C-2671-4B6D-ADD1-6DDF8F52C25F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D75A232C-2671-4B6D-ADD1-6DDF8F52C25F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{897276FC-C9D8-4C42-8013-38BAD1D9396C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{897276FC-C9D8-4C42-8013-38BAD1D9396C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{897276FC-C9D8-4C42-8013-38BAD1D9396C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{897276FC-C9D8-4C42-8013-38BAD1D9396C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{897276FC-C9D8-4C42-8013-38BAD1D9396C} = {B1E50A03-EBDC-48AA-A48D-73CE751E7509}
+	EndGlobalSection
+EndGlobal
