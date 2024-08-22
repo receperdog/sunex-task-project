@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TaskDb"));
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITaskHubClient, TaskHubClient>();
 
 // Add logging
 builder.Logging.ClearProviders();
@@ -20,6 +21,18 @@ builder.Logging.AddConsole();
 
 // Register AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:3001")
+                   .AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .AllowCredentials();
+        });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
@@ -37,6 +50,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+//app.UseHttpsRedirection();
+
 // Use Swagger
 if (app.Environment.IsDevelopment())
 {
@@ -47,12 +62,10 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // Set Swagger UI at the root of the application
     });
 }
-
+app.UseCors();
+app.UseRouting();
 // For Custom exceptions. Handle exceptions with middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-app.UseHttpsRedirection();
 app.MapControllers();
 app.MapHub<TaskHub>("/taskHub");
-
 app.Run();
