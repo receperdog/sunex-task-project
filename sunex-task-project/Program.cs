@@ -6,6 +6,7 @@ using sunex_task_project.Data;
 using sunex_task_project.Hubs;
 using sunex_task_project.Middleware;
 using sunex_task_project.Services;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,21 +47,27 @@ builder.Services.AddApiVersioning(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Use Scalar & openapi instead of Swagger
+//builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 //app.UseHttpsRedirection();
 
-// Use Swagger
+// Use Scalar & openapi instead of Swagger
 if (app.Environment.IsDevelopment())
 {
+    /*
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Task API V1");
         c.RoutePrefix = string.Empty; // Set Swagger UI at the root of the application
     });
+    */
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 app.UseCors();
 app.UseRouting();
